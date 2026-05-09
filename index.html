@@ -120,6 +120,40 @@ button{
 const SERVICE_KEY =
 "318dd9c03d381f55840686e8f072e6e43de91af0eac5ae2298263fb21e032798";
 
+function getBaseTimeAndDate(){
+    let today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    
+    const hour = today.getHours();
+    let baseTime = "0600";
+    let baseDate = `${yyyy}${mm}${dd}`;
+    
+    // 공공 API는 3시간 단위로 제공: 06, 09, 12, 15, 18, 21, 00
+    if(hour >= 21){
+        baseTime = "2100";
+    } else if(hour >= 18){
+        baseTime = "1800";
+    } else if(hour >= 15){
+        baseTime = "1500";
+    } else if(hour >= 12){
+        baseTime = "1200";
+    } else if(hour >= 9){
+        baseTime = "0900";
+    } else if(hour >= 6){
+        baseTime = "0600";
+    } else {
+        // 06:00 이전이면 전날 21:00 데이터 사용
+        baseTime = "2100";
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        baseDate = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
+    }
+    
+    return { baseDate, baseTime };
+}
+
 async function loadWeather(){
 
     document.getElementById("result").innerHTML =
@@ -128,20 +162,10 @@ async function loadWeather(){
     const beachNum =
         document.getElementById("beach").value;
 
-    const today = new Date();
-
-    const yyyy = today.getFullYear();
-
-    const mm =
-        String(today.getMonth()+1).padStart(2,'0');
-
-    const dd =
-        String(today.getDate()).padStart(2,'0');
-
-    const baseDate = `${yyyy}${mm}${dd}`;
+    const { baseDate, baseTime } = getBaseTimeAndDate();
 
     const url =
-`https://apis.data.go.kr/1360000/BeachInfoservice/getVilageFcstBeach?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=20&dataType=JSON&base_date=${baseDate}&base_time=0500&beach_num=${beachNum}`;
+`https://apis.data.go.kr/1360000/BeachInfoservice/getVilageFcstBeach?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=100&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&beach_num=${beachNum}`;
 
     try{
 
@@ -151,8 +175,17 @@ async function loadWeather(){
 
         console.log(data);
 
+        // 응답 코드 확인
+        if(data.response.header.resultCode !== "00"){
+            throw new Error(data.response.header.resultMsg);
+        }
+
         const items =
             data.response.body.items.item;
+
+        if(!items || items.length === 0){
+            throw new Error("조회된 데이터가 없습니다. 시간을 다시 확인해주세요.");
+        }
 
         let temp = "-";
         let sky = "-";
@@ -236,7 +269,7 @@ async function loadWeather(){
         document.getElementById("result").innerHTML =
         `
         <div class="loading">
-            오류 발생
+            ❌ 오류 발생: ${error.message}
         </div>
         `;
     }
