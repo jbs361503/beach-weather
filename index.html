@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>전국 해수욕장 날씨</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:sans-serif;
+    background:#87CEEB;
+    padding:30px;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    background:white;
+    border-radius:20px;
+    padding:30px;
+}
+
+h1{
+    text-align:center;
+    color:#0077cc;
+}
+
+.top{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin:30px 0;
+    flex-wrap:wrap;
+}
+
+select,button{
+    padding:15px;
+    font-size:18px;
+    border-radius:10px;
+    border:none;
+}
+
+button{
+    background:#0077cc;
+    color:white;
+    cursor:pointer;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:#f3f9ff;
+    padding:20px;
+    border-radius:15px;
+}
+
+.label{
+    color:#666;
+    margin-bottom:10px;
+}
+
+.value{
+    font-size:30px;
+    color:#0077cc;
+    font-weight:bold;
+}
+
+.loading{
+    text-align:center;
+    font-size:20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🌊 전국 해수욕장 날씨</h1>
+
+<div class="top">
+
+<select id="beach">
+
+<option value="1">경포해수욕장</option>
+<option value="2">낙산해수욕장</option>
+<option value="3">대천해수욕장</option>
+<option value="4">망상해수욕장</option>
+<option value="5">송정해수욕장</option>
+<option value="6">해운대해수욕장</option>
+
+</select>
+
+<button onclick="loadWeather()">
+조회하기
+</button>
+
+</div>
+
+<div id="result">
+
+<div class="loading">
+조회 버튼을 눌러주세요.
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const SERVICE_KEY =
+"318dd9c03d381f55840686e8f072e6e43de91af0eac5ae2298263fb21e032798";
+
+async function loadWeather(){
+
+    document.getElementById("result").innerHTML =
+    `<div class="loading">불러오는 중...</div>`;
+
+    const beachNum =
+        document.getElementById("beach").value;
+
+    const today = new Date();
+
+    const yyyy = today.getFullYear();
+
+    const mm =
+        String(today.getMonth()+1).padStart(2,'0');
+
+    const dd =
+        String(today.getDate()).padStart(2,'0');
+
+    const baseDate = `${yyyy}${mm}${dd}`;
+
+    const url =
+`https://apis.data.go.kr/1360000/BeachInfoservice/getVilageFcstBeach?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=20&dataType=JSON&base_date=${baseDate}&base_time=0500&beach_num=${beachNum}`;
+
+    try{
+
+        const response = await fetch(url);
+
+        const data = await response.json();
+
+        console.log(data);
+
+        const items =
+            data.response.body.items.item;
+
+        let temp = "-";
+        let sky = "-";
+        let wind = "-";
+        let rain = "-";
+        let wave = "-";
+
+        items.forEach(item=>{
+
+            if(item.category === "TMP"){
+                temp = item.fcstValue + "°C";
+            }
+
+            if(item.category === "WSD"){
+                wind = item.fcstValue + "m/s";
+            }
+
+            if(item.category === "POP"){
+                rain = item.fcstValue + "%";
+            }
+
+            if(item.category === "WAV"){
+                wave = item.fcstValue + "m";
+            }
+
+            if(item.category === "SKY"){
+
+                if(item.fcstValue == "1"){
+                    sky = "☀️ 맑음";
+                }
+
+                else if(item.fcstValue == "3"){
+                    sky = "⛅ 구름많음";
+                }
+
+                else if(item.fcstValue == "4"){
+                    sky = "☁️ 흐림";
+                }
+
+            }
+
+        });
+
+        document.getElementById("result").innerHTML =
+
+        `
+        <div class="grid">
+
+            <div class="card">
+                <div class="label">현재 기온</div>
+                <div class="value">${temp}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">하늘 상태</div>
+                <div class="value">${sky}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">풍속</div>
+                <div class="value">${wind}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">강수확률</div>
+                <div class="value">${rain}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">파고</div>
+                <div class="value">${wave}</div>
+            </div>
+
+        </div>
+        `;
+
+    }catch(error){
+
+        console.error(error);
+
+        document.getElementById("result").innerHTML =
+        `
+        <div class="loading">
+            오류 발생
+        </div>
+        `;
+    }
+
+}
+
+</script>
+
+</body>
+</html>
