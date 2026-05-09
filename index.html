@@ -77,6 +77,18 @@ button{
     font-size:20px;
 }
 
+.debug{
+    background:#ffe6e6;
+    padding:15px;
+    border-radius:10px;
+    margin-top:20px;
+    font-size:14px;
+    color:#666;
+    max-height:200px;
+    overflow-y:auto;
+    border:1px solid #ffcccc;
+}
+
 </style>
 </head>
 
@@ -90,12 +102,12 @@ button{
 
 <select id="beach">
 
-<option value="1">경포해수욕장</option>
-<option value="2">낙산해수욕장</option>
-<option value="3">대천해수욕장</option>
-<option value="4">망상해수욕장</option>
-<option value="5">송정해수욕장</option>
-<option value="6">해운대해수욕장</option>
+<option value="101">경포해수욕장</option>
+<option value="102">낙산해수욕장</option>
+<option value="103">대천해수욕장</option>
+<option value="104">망상해수욕장</option>
+<option value="105">송정해수욕장</option>
+<option value="106">해운대해수욕장</option>
 
 </select>
 
@@ -167,24 +179,41 @@ async function loadWeather(){
     const url =
 `https://apis.data.go.kr/1360000/BeachInfoservice/getVilageFcstBeach?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=100&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&beach_num=${beachNum}`;
 
+    console.log("요청 URL:", url);
+    console.log("beach_num:", beachNum);
+    console.log("baseDate:", baseDate);
+    console.log("baseTime:", baseTime);
+
     try{
 
         const response = await fetch(url);
-
         const data = await response.json();
 
-        console.log(data);
+        console.log("API 응답:", data);
 
         // 응답 코드 확인
-        if(data.response.header.resultCode !== "00"){
-            throw new Error(data.response.header.resultMsg);
+        if(!data.response || !data.response.header){
+            throw new Error("API 응답 형식 오류");
         }
 
-        const items =
-            data.response.body.items.item;
+        const resultCode = data.response.header.resultCode;
+        const resultMsg = data.response.header.resultMsg;
+
+        console.log("resultCode:", resultCode);
+        console.log("resultMsg:", resultMsg);
+
+        if(resultCode !== "00"){
+            throw new Error(`API 오류 (${resultCode}): ${resultMsg}`);
+        }
+
+        if(!data.response.body || !data.response.body.items){
+            throw new Error("조회된 데이터가 없습니다. 시간이나 날짜를 확인해주세요.");
+        }
+
+        const items = data.response.body.items.item;
 
         if(!items || items.length === 0){
-            throw new Error("조회된 데이터가 없습니다. 시간을 다시 확인해주세요.");
+            throw new Error("조회된 데이터가 없습니다.");
         }
 
         let temp = "-";
@@ -264,12 +293,21 @@ async function loadWeather(){
 
     }catch(error){
 
-        console.error(error);
+        console.error("에러:", error);
 
         document.getElementById("result").innerHTML =
         `
         <div class="loading">
-            ❌ 오류 발생: ${error.message}
+            ❌ ${error.message}
+        </div>
+        <div class="debug">
+            <strong>디버깅 정보:</strong><br>
+            - 브라우저 개발자 도구(F12) → Console 탭에서 오류 확인<br>
+            - ServiceKey가 올바른지 확인<br>
+            - API 사용량 제한 확인: <a href="https://www.data.go.kr" target="_blank">data.go.kr</a><br>
+            <br>
+            <strong>console.log 내용:</strong><br>
+            위의 console.log를 보세요.
         </div>
         `;
     }
