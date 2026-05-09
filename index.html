@@ -129,25 +129,27 @@ function getBaseTimeAndDate(){
     
     const baseDate = `${yyyy}${mm}${dd}`;
     
-    // 현재 시간에 맞는 base_time 선택
-    // 공공 API 예보는 06, 09, 12, 15, 18, 21, 00, 03시 발표
+    // 기상청 발표시간: 05시, 11시, 17시, 23시
     const hour = today.getHours();
-    let baseTime = "0600";
+    let baseTime = "0500";
     
-    if(hour >= 21) {
-        baseTime = "2100";
-    } else if(hour >= 18) {
-        baseTime = "1800";
-    } else if(hour >= 15) {
-        baseTime = "1500";
-    } else if(hour >= 12) {
-        baseTime = "1200";
-    } else if(hour >= 9) {
-        baseTime = "0900";
-    } else if(hour >= 6) {
-        baseTime = "0600";
+    if(hour >= 23) {
+        baseTime = "2300";
+    } else if(hour >= 17) {
+        baseTime = "1700";
+    } else if(hour >= 11) {
+        baseTime = "1100";
+    } else if(hour >= 5) {
+        baseTime = "0500";
     } else {
-        baseTime = "0300";
+        // 새벽 5시 전이면 전날 23시 데이터
+        baseTime = "2300";
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return {
+            baseDate: `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`,
+            baseTime: baseTime
+        };
     }
     
     return { baseDate, baseTime };
@@ -285,12 +287,6 @@ async function loadWeather(){
         `
         <div class="loading" style="color:red;">
             ❌ ${error.message}
-        </div>
-        <div style="background:#ffe6e6;padding:15px;border-radius:10px;margin-top:20px;font-size:14px;">
-            <strong>해결 방법:</strong><br>
-            • F12 → Console 탭에서 오류 확인<br>
-            • ServiceKey 확인<br>
-            • API 사용량 초과 여부 확인
         </div>
         `;
     }
