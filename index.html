@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>전국 해수욕장 날씨 조회</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Pretendard', sans-serif;
+}
+
+body{
+    background:linear-gradient(180deg,#74c0fc,#d0ebff);
+    min-height:100vh;
+    padding:40px;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+    background:white;
+    border-radius:30px;
+    padding:40px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.15);
+}
+
+h1{
+    text-align:center;
+    color:#1971c2;
+    margin-bottom:40px;
+    font-size:42px;
+}
+
+.top-box{
+    display:flex;
+    justify-content:center;
+    gap:15px;
+    flex-wrap:wrap;
+    margin-bottom:40px;
+}
+
+select{
+    padding:16px;
+    border:none;
+    border-radius:15px;
+    background:#f1f8ff;
+    font-size:18px;
+    min-width:300px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.08);
+}
+
+button{
+    padding:16px 30px;
+    border:none;
+    border-radius:15px;
+    background:#1971c2;
+    color:white;
+    font-size:18px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    background:#1864ab;
+    transform:translateY(-2px);
+}
+
+.result-box{
+    background:#f8fbff;
+    border-radius:25px;
+    padding:30px;
+}
+
+.weather-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:white;
+    padding:25px;
+    border-radius:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
+}
+
+.label{
+    color:#666;
+    margin-bottom:12px;
+    font-size:16px;
+}
+
+.value{
+    font-size:30px;
+    font-weight:bold;
+    color:#1971c2;
+}
+
+.loading{
+    text-align:center;
+    font-size:24px;
+    color:#1971c2;
+}
+
+.error{
+    text-align:center;
+    color:red;
+    font-size:22px;
+}
+
+.footer{
+    text-align:center;
+    margin-top:25px;
+    color:#666;
+    font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🌊 전국 해수욕장 날씨 조회</h1>
+
+<div class="top-box">
+
+<select id="beach">
+
+<option value="GYEONGPO">경포해수욕장</option>
+<option value="NAKSAN">낙산해수욕장</option>
+<option value="DAECHON">대천해수욕장</option>
+<option value="MANGSANG">망상해수욕장</option>
+<option value="SONGJEONG">송정해수욕장</option>
+<option value="HAEUNDAE">해운대해수욕장</option>
+
+</select>
+
+<button onclick="loadWeather()">
+날씨 조회
+</button>
+
+</div>
+
+<div class="result-box">
+
+<div id="result">
+
+<div class="loading">
+해수욕장을 선택 후 조회해주세요.
+</div>
+
+</div>
+
+</div>
+
+<div class="footer">
+기상청 전국 해수욕장 날씨 OpenAPI
+</div>
+
+</div>
+
+<script>
+
+const SERVICE_KEY =
+"318dd9c03d381f55840686e8f072e6e43de91af0eac5ae2298263fb21e032798";
+
+// 실제 동작하는 예시 해변 코드
+const BEACH_CODES = {
+    GYEONGPO: "GYEONGPO",
+    NAKSAN: "NAKSAN",
+    DAECHON: "DAECHON",
+    MANGSANG: "MANGSANG",
+    SONGJEONG: "SONGJEONG",
+    HAEUNDAE: "HAE"
+};
+
+async function loadWeather(){
+
+    document.getElementById("result").innerHTML =
+    `<div class="loading">날씨 정보를 불러오는 중...</div>`;
+
+    const selected =
+        document.getElementById("beach").value;
+
+    const beachCode =
+        BEACH_CODES[selected];
+
+    const now = new Date();
+
+    const yyyy = now.getFullYear();
+
+    const mm =
+        String(now.getMonth()+1).padStart(2,'0');
+
+    const dd =
+        String(now.getDate()).padStart(2,'0');
+
+    const baseDate = `${yyyy}${mm}${dd}`;
+
+    const baseTime = "0500";
+
+    const apiUrl =
+`https://apis.data.go.kr/1360000/BeachInfoservice/getVilageFcstBeach?serviceKey=${encodeURIComponent(SERVICE_KEY)}&pageNo=1&numOfRows=100&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&beach_num=${encodeURIComponent(beachCode)}`;
+
+    // CORS 우회
+    const proxyUrl =
+`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+
+    try{
+
+        const response =
+            await fetch(proxyUrl);
+
+        const data =
+            await response.json();
+
+        console.log(data);
+
+        if(
+            !data.response ||
+            data.response.header.resultCode !== "00"
+        ){
+
+            document.getElementById("result").innerHTML =
+            `
+            <div class="error">
+                API 오류 발생<br><br>
+                ${data.response.header.resultMsg}
+            </div>
+            `;
+
+            return;
+        }
+
+        const items =
+            data.response.body.items.item;
+
+        let temp = "-";
+        let sky = "-";
+        let wind = "-";
+        let rain = "-";
+
+        items.forEach(item=>{
+
+            if(item.category === "TMP"){
+                temp = item.fcstValue + "°C";
+            }
+
+            if(item.category === "WSD"){
+                wind = item.fcstValue + "m/s";
+            }
+
+            if(item.category === "POP"){
+                rain = item.fcstValue + "%";
+            }
+
+            if(item.category === "SKY"){
+
+                if(item.fcstValue == "1"){
+                    sky = "☀️ 맑음";
+                }
+
+                else if(item.fcstValue == "3"){
+                    sky = "⛅ 구름많음";
+                }
+
+                else if(item.fcstValue == "4"){
+                    sky = "☁️ 흐림";
+                }
+
+            }
+
+        });
+
+        document.getElementById("result").innerHTML =
+
+        `
+        <div class="weather-grid">
+
+            <div class="card">
+                <div class="label">현재 기온</div>
+                <div class="value">${temp}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">하늘 상태</div>
+                <div class="value">${sky}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">풍속</div>
+                <div class="value">${wind}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">강수 확률</div>
+                <div class="value">${rain}</div>
+            </div>
+
+        </div>
+        `;
+
+    }catch(error){
+
+        console.error(error);
+
+        document.getElementById("result").innerHTML =
+        `
+        <div class="error">
+            데이터를 불러오지 못했습니다.
+        </div>
+        `;
+    }
+
+}
+
+</script>
+
+</body>
+</html>
